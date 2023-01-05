@@ -1,0 +1,58 @@
+{
+  "name": "rasphome",
+  "version": "0.0.1",
+  "author": "Alexsander Nogueira",
+  "private": true,
+  "scripts": {
+    "start": "npx nodemon",
+    "test": "jest --no-cache",
+    "dev": "npx nodemon",
+    "build": "tsc",
+    "prod": "npm run build && node dist/entry.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.1.3",
+    "@types/body-parser": "^1.19.0",
+    "@types/express": "^4.17.6",
+    "@types/express-promise-router": "^3.0.0",
+    "@types/helmet": "0.0.47",
+    "@types/jest": "^25.2.3",
+    "@types/morgan": "^1.9.0",
+    "@types/rpi-gpio": "^2.1.0",
+    "@types/supertest": "^2.0.9",
+    "dns-txt": "^2.0.2",
+    "dotenv": "^8.2.0",
+    "dotenv-safe": "^8.2.0",
+    "express": "^4.17.1",
+    "helmet": "^3.22.0",
+    "jest": "^26.0.1",
+    "mime": "^3.0.0",
+    "morgan": "^1.10.0",
+    "supertest": "^4.0.2",
+    "ts-jest": "^26.0.0",
+    "video-stitch": "^1.7.1"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.17",
+    "chai": "^4.2.0",
+    "nodemon": "^2.0.20",
+    "request": "^2.88.2",
+    "should": "^13.2.3",
+    "ts-node": "^7.0.1",
+    "typescript": "^3.9.10"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "testRegex": "\\.test\\.ts",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ]
+  }
+}
