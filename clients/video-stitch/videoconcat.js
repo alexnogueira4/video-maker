@@ -16,7 +16,7 @@ module.exports = function (spec) {
 	});
 
 	spec = _.defaults(spec, {
-    silent: true,
+    silent: false,
     overwrite: null,
     ffmpeg_path:'ffmpeg'
   });
@@ -65,7 +65,7 @@ module.exports = function (spec) {
         if (code === 0) {
           resolve(outputFileName);
         } else {
-          reject();
+          reject(["entrou aqui", spec.ffmpeg_path, args.fileList, outputFileName, overwrite]);
         }
       });
     });
@@ -91,11 +91,13 @@ module.exports = function (spec) {
     let fileListFilename = tmp.tmpNameSync({
       postfix: '.txt'
     });
-
-    fs.writeFileSync(fileListFilename, fileListText, 'utf8');
+    // fs.writeFileSync(fileListFilename, fileListText, 'utf8');
+    let name = "videotext.txt";
+    fs.writeFileSync(name, fileListText, 'utf8');
+    console.log("TEXTOOOO", fileListFilename, name)
 
     return concatClips({
-      fileList: fileListFilename,
+      fileList: name,
     });
   }
 
