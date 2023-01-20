@@ -1,11 +1,18 @@
-import "./config/env"
-import Database from './config/database'
-import Entertainment from './api/entertainment'
+// import "./config/env"
+// import Database from './config/database'
+import VideoMaker from './api/videomaker'
 
-const database = new Database();
-(async () => {
-  await database.connect()
-  new Entertainment({connection: database.connection})
+// const database = new Database();
+(() => {
+  try {
+    new VideoMaker({
+      // connection: database.connection
+    })
+    
+  } catch (error) {
+      console.log("FINALMENT", error)
+  }
+//   // await database.connect()
 })()
 // console.log(new Entertainment())
 // var teste = new Client()
