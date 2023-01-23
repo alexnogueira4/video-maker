@@ -56,8 +56,11 @@ module.exports = function (spec) {
    * @return {[type]}      [description]
    */
   function concatClips(args) {
+    
     const overwrite = handleOverwrite();
+    
     return new Promise((resolve, reject) => {
+      console.log("ENTROU AQUI")
       let child = shelljs.exec(`${spec.ffmpeg_path} -f concat -safe 0 -protocol_whitelist file,http,https,tcp,tls,crypto -i ${args.fileList} -c copy ${outputFileName} ${overwrite}`, { async: true, silent: spec.silent });
 
       child.on('exit', (code, signal) => {
@@ -65,6 +68,13 @@ module.exports = function (spec) {
         if (code === 0) {
           resolve(outputFileName);
         } else {
+          console.log(
+            "entrou aqui",
+            "\n", spec.ffmpeg_path,
+            "\n", args.fileList,
+            "\n", outputFileName,
+            "\n", overwrite
+          )
           reject(["entrou aqui", spec.ffmpeg_path, args.fileList, outputFileName, overwrite]);
         }
       });
@@ -85,16 +95,16 @@ module.exports = function (spec) {
 
   function doConcat() {
 
-
     let fileListText = getTextForClips(clips);
+    
+    // let fileListFilename = tmp.tmpNameSync({
+      //   postfix: '.txt'
+      // });
+      // // fs.writeFileSync(fileListFilename, fileListText, 'utf8');
+      let name = "videotext.txt";
+      fs.writeFileSync(name, fileListText, 'utf8');
 
-    let fileListFilename = tmp.tmpNameSync({
-      postfix: '.txt'
-    });
-    // fs.writeFileSync(fileListFilename, fileListText, 'utf8');
-    let name = "videotext.txt";
-    fs.writeFileSync(name, fileListText, 'utf8');
-    console.log("TEXTOOOO", fileListFilename, name)
+      // console.log("TEXTOOOO", fileListFilename, name)
 
     return concatClips({
       fileList: name,

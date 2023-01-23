@@ -18,7 +18,7 @@ export default class VideoMaker {
     await this.videoConcat({
       // ffmpeg_path: <path-to-ffmpeg> Optional. Otherwise it will just use ffmpeg on your $PATH
       silent: true, // optional. if set to false, gives detailed output on console
-      overwrite: false // optional. by default, if file already exists, ffmpeg will ask for overwriting in console and that pause the process. if set to true, it will force overwriting. if set to false it will prevent overwriting.
+      overwrite: true // optional. by default, if file already exists, ffmpeg will ask for overwriting in console and that pause the process. if set to true, it will force overwriting. if set to false it will prevent overwriting.
     })
       .clips([
         {
@@ -28,10 +28,12 @@ export default class VideoMaker {
           "fileName": "media_test.mp4"
         }
       ])
-      .output("test_new_desenhos") //optional absolute file name for output file
+      .output("test_new_desenhos2.mp4") //optional absolute file name for output file
       .concat()
       .then((outputFileName) => {
         console.log("\n\noutputFileName:", outputFileName)
+      }).catch(error=>{
+        console.log("CATCH", error)
       });
   }
 
