@@ -1,8 +1,6 @@
 'use strict';
 
 let tmp = require('tmp');
-let fext = require('file-extension');
-let fs = require('fs');
 let shelljs = require('shelljs');
 let _ = require('lodash');
 
@@ -60,8 +58,10 @@ module.exports = function (spec) {
     const overwrite = handleOverwrite();
     
     return new Promise((resolve, reject) => {
-      console.log("ENTROU AQUI")
-      let child = shelljs.exec(`${spec.ffmpeg_path} -f concat -safe 0 -protocol_whitelist file,http,https,tcp,tls,crypto -i ${args.fileList} -c copy ${outputFileName} ${overwrite}`, { async: true, silent: spec.silent });
+      console.log("LISTA DE VIDEOSSSS", args.fileList, args.fileList.length)
+      let child = shelljs.exec(`
+        ${spec.ffmpeg_path} ${args.fileList.join('')} -filter_complex "concat=n=${args.fileList.length}:v=1:a=1" -movflags +faststart -preset ultrafast ${outputFileName} ${overwrite}
+      `, { async: true, silent: spec.silent });
 
       child.on('exit', (code, signal) => {
 
@@ -73,7 +73,9 @@ module.exports = function (spec) {
             "\n", spec.ffmpeg_path,
             "\n", args.fileList,
             "\n", outputFileName,
-            "\n", overwrite
+            "\n", overwrite,
+            "\n", code,
+            "\n-", signal,
           )
           reject(["entrou aqui", spec.ffmpeg_path, args.fileList, outputFileName, overwrite]);
         }
@@ -86,28 +88,19 @@ module.exports = function (spec) {
   }
 
   function getLineForClip(clip) {
-    return `file '${escapePath(clip.fileName)}'`;
+    return `-i ${escapePath(clip.fileName)} `;
   }
 
   function getTextForClips(clips) {
-    return clips.map(getLineForClip).join('\n');
+    return clips.map(getLineForClip);
   }
 
   function doConcat() {
 
     let fileListText = getTextForClips(clips);
     
-    // let fileListFilename = tmp.tmpNameSync({
-      //   postfix: '.txt'
-      // });
-      // // fs.writeFileSync(fileListFilename, fileListText, 'utf8');
-      let name = "videotext.txt";
-      fs.writeFileSync(name, fileListText, 'utf8');
-
-      // console.log("TEXTOOOO", fileListFilename, name)
-
     return concatClips({
-      fileList: name,
+      fileList: fileListText,
     });
   }
 
