@@ -58,7 +58,6 @@ module.exports = function (spec) {
     const overwrite = handleOverwrite();
     
     return new Promise((resolve, reject) => {
-      console.log("LISTA DE VIDEOSSSS", args.fileList, args.fileList.length)
       let child = shelljs.exec(`
         ${spec.ffmpeg_path} ${args.fileList.join('')} -filter_complex "concat=n=${args.fileList.length}:v=1:a=1" -movflags +faststart -preset ultrafast ${outputFileName} ${overwrite}
       `, { async: true, silent: spec.silent });
