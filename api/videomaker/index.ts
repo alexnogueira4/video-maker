@@ -66,7 +66,7 @@ export default class VideoMaker {
   addOpening({ type, opening = null }) {
     opening = opening || this.showToCompile.openings
     if (opening && type) {
-      return { fileName: `/Volumes/HDExterno/openings/${opening[type]}.mp4` }
+      return { fileName: `${process.env.MEDIA_FOLDER}/openings/${opening[type]}.mp4` }
     }
   }
 
@@ -77,7 +77,7 @@ export default class VideoMaker {
 
     this.comercials.some(comercial => {
       if (duration >= time) return true;
-      const comercial_path = `/Volumes/HDExterno/${comercial.path}/${comercial.name}.mp4`;
+      const comercial_path = `${process.env.MEDIA_FOLDER}/${comercial.path}/${comercial.name}.mp4`;
       comercials.push({ fileName: comercial_path })
       duration += this.formatTime(comercial.duration)
     })
@@ -99,7 +99,7 @@ export default class VideoMaker {
       }
 
       duration += this.formatTime(cartoons_episodes.duration)
-      let episode_path = `/Volumes/HDExterno/${cartoons.path}/${cartoons_episodes.episode}.mp4`;
+      let episode_path = `${process.env.MEDIA_FOLDER}/${cartoons.path}/${cartoons_episodes.episode}.mp4`;
       clip.push({ fileName: episode_path })
     }
 
@@ -126,7 +126,7 @@ export default class VideoMaker {
       overwrite: true // optional. by default, if file already exists, ffmpeg will ask for overwriting in console and that pause the process. if set to true, it will force overwriting. if set to false it will prevent overwriting.
     })
       .clips(clips)
-      .output(`${this.showToCompile.path}.mkv`) //optional absolute file name for output file
+      .output(`${process.env.MEDIA_FOLDER}/${this.showToCompile.path}.mkv`) //optional absolute file name for output file
       .concat()
       .then((outputFileName) => {
         console.log("\n\noutputFileName:", outputFileName)
