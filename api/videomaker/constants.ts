@@ -15,10 +15,10 @@ export const OPENINGS_TYPES = {
 }
 
 export const DEFAULTS = {
-  COMERCIAL_START_DURATION: 600, // 5 minutes
-  COMERCIAL_END_DURATION: 4500, // 10 minutes
-  COMERCIAL_DURATION: 480, // 10 minutes
-  CARTOON_DURATION: 900, // 20 minutes
+  COMERCIAL_START_DURATION: 600, // 10 minutes
+  COMERCIAL_END_DURATION: 900, // 15 minutes
+  COMERCIAL_DURATION: 420, // 6 minutes
+  CARTOON_DURATION: 840, // 19 minutes
 }
 
 export default {}

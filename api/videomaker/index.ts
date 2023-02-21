@@ -1,5 +1,6 @@
-import { DEFAULTS, OPENINGS_TYPES, OPENINGS } from './constants'
+import { DEFAULTS, OPENINGS_TYPES } from './constants'
 import moment from 'moment';
+import shelljs from 'shelljs';
 import videoStitch from '../../clients/video-stitch';
 
 var records = [
@@ -14,6 +15,7 @@ export default class VideoMaker {
   clips: any = [];
   comercials: any;
   currentShowId: any;
+  openings: any;
   constructor(options) {
     this.connection = options.connection
 
@@ -37,7 +39,8 @@ export default class VideoMaker {
       await this.getShowToCompile()
       // await this.getShowGrid()
       await this.getComercials()
-      await this.concatMedia()
+      await this.getOpenings()
+      await this.sliceClips()
     } catch (error) {
       console.log(error)
     }
@@ -63,14 +66,16 @@ export default class VideoMaker {
     return parseInt(timeSplit[1]) * 60 + hoursToSeconds + parseInt(timeSplit[2])
   }
 
-  addOpening({ type, opening = null }) {
-    opening = opening || this.showToCompile.openings
+  addOpening(type) {
+    let opening = this.openings.find(e => e.type === type)
+
     if (opening && type) {
-      return { fileName: `${process.env.MEDIA_FOLDER}/openings/${opening[type]}.mp4` }
+      return { fileName: `${process.env.MEDIA_FOLDER}/openings/${opening.name}.mp4` }
     }
   }
 
   async addComercials(time = DEFAULTS.COMERCIAL_DURATION) {
+    // return []
     let duration = 0;
     let comercials = []
     this.comercials = this.shuffle(this.comercials)
@@ -92,10 +97,10 @@ export default class VideoMaker {
     for (const { cartoons, cartoons_episodes } of this.showToCompile.showsGrid) {
       if (duration >= DEFAULTS.CARTOON_DURATION) {
         duration = 0
-        clip.push(this.addOpening({ type: OPENINGS_TYPES.START_COMERCIAL }))
+        clip.push(this.addOpening(OPENINGS_TYPES.START_COMERCIAL))
         let comercials: any = await this.addComercials()
         clip.push(...comercials)
-        clip.push(this.addOpening({ type: OPENINGS_TYPES.END_COMERCIAL }))
+        clip.push(this.addOpening(OPENINGS_TYPES.END_COMERCIAL))
       }
 
       duration += this.formatTime(cartoons_episodes.duration)
@@ -103,13 +108,11 @@ export default class VideoMaker {
       clip.push({ fileName: episode_path })
     }
 
-    const opening = this.showToCompile.openings
-
-    if (Object.keys(opening).length) {
-      clip.unshift(this.addOpening({ type: OPENINGS_TYPES.START }))
+    if (Object.keys(this.openings).length) {
+      clip.unshift(this.addOpening(OPENINGS_TYPES.START))
       let comercials: any = await this.addComercials(DEFAULTS.COMERCIAL_START_DURATION)
       clip.unshift(...comercials)
-      clip.push(this.addOpening({ type: OPENINGS_TYPES.END }))
+      clip.push(this.addOpening(OPENINGS_TYPES.END))
     }
 
     let comercials = await this.addComercials(DEFAULTS.COMERCIAL_END_DURATION)
@@ -117,24 +120,53 @@ export default class VideoMaker {
     return clip;
   }
 
-  async concatMedia() {
-    let clips = await this.formatClips()
+  async sliceClips(clips = null) {
+    clips = clips || await this.formatClips()
+    let arrayOfFilesSize = 5
+    var clipsSliced: any = new Array(Math.ceil(clips.length / arrayOfFilesSize))
+      .fill('')
+      .map(_ => clips.splice(0, arrayOfFilesSize))
 
+    let totalClips = [];
+    for (const clipsList of clipsSliced) {
+      console.log(clipsList)
+      await this.concatMedia(clipsList, (outputFileName) => {
+        totalClips.push({ fileName: outputFileName })
+      })
+    }
+
+    if (totalClips.length > arrayOfFilesSize) {
+      this.sliceClips(totalClips)
+    } else {
+
+      await this.concatMedia(totalClips, (outputFileName) => {
+        console.log("final name", outputFileName)
+        this.updateShow()
+        this.deleteTempFiles()
+      }, this.showToCompile.path)
+    }
+
+  }
+
+  async concatMedia(clips, callback, fileName = null) {
+    fileName = fileName || `_temp_${new Date().valueOf()}`
+    // callback(fileName)
     await this.videoConcat({
-      // ffmpeg_path: <path-to-ffmpeg> Optional. Otherwise it will just use ffmpeg on your $PATH
       silent: false, // optional. if set to false, gives detailed output on console
       overwrite: true // optional. by default, if file already exists, ffmpeg will ask for overwriting in console and that pause the process. if set to true, it will force overwriting. if set to false it will prevent overwriting.
     })
       .clips(clips)
-      .output(`${process.env.MEDIA_FOLDER}/${this.showToCompile.path}.mkv`) //optional absolute file name for output file
+      .output(`${process.env.MEDIA_FOLDER}/medias/${fileName}.mkv`) //optional absolute file name for output file
       .concat()
       .then((outputFileName) => {
         console.log("\n\noutputFileName:", outputFileName)
-        this.updateShow()
+        callback(outputFileName)
       }).catch(error => {
         console.log("CATCH", error)
+        throw error
       });
   }
+
 
   async getShowGrid() {
     if (!this.showToCompile.id) {
@@ -171,7 +203,7 @@ export default class VideoMaker {
   }
 
   async updateShow() {
-    const tomorrowDate = moment(this.showToCompile.date_to_show).add(2, 'days').format("YYYY-MM-DD");
+    const tomorrowDate = moment(this.showToCompile.date_to_show).add(1, 'days').format("YYYY-MM-DD");
 
     const { data: nextShow, error: errorNextShow } = await this.connection
       .from('scheduleShow')
@@ -226,7 +258,7 @@ export default class VideoMaker {
       throw errorNextShowSchedule
     }
 
-    console.log("Next show scheduled: ", data)
+    console.log("Next show scheduled: ", nextShow)
   }
 
   compare(a, b) {
@@ -240,7 +272,8 @@ export default class VideoMaker {
   }
 
   async getShowToCompile() {
-    const tomorrowDate = moment().add(1, 'days').format("YYYY-MM-DD");
+    // const tomorrowDate = moment().add(1, 'days').format("YYYY-MM-DD");
+    const tomorrowDate = moment().format("YYYY-MM-DD");
 
     const { data, error } = await this.connection
       .from('scheduleShow')
@@ -277,7 +310,7 @@ export default class VideoMaker {
 
     data.path = data.shows.path
     data.showsGrid.sort(this.compare)
-    data.openings = OPENINGS[data.path]
+    // data.openings = OPENINGS[data.path]
 
     this.showToCompile = data
 
@@ -295,6 +328,22 @@ export default class VideoMaker {
     }
 
     this.comercials = data
+
+    return data
+  }
+
+  async getOpenings() {
+    const { data, error } = await this.connection
+      .from('openings')
+      .select()
+      .eq('show', this.showToCompile.show)
+
+    if (error) {
+      console.log("opening not found", error)
+      return false;
+    }
+
+    this.openings = data
 
     return data
   }
@@ -322,6 +371,22 @@ export default class VideoMaker {
         console.log('data: ', data[0].episode, data[0].name)
       }
     }
+  }
+
+  async deleteTempFiles() {
+    return new Promise((resolve, reject) => {
+      let child = shelljs.exec(`rm ${process.env.MEDIA_FOLDER}/medias/_temp_*`, { async: true, silent: true });
+
+      child.on('exit', (code, _signal) => {
+        if (code === 0) {
+          resolve(true);
+        } else {
+          console.log("error deleting temp files")
+          reject("error deleting temp files");
+        }
+      });
+    });
+
   }
 
   // async loadComercials() {
