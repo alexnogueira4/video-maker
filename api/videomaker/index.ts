@@ -11,7 +11,6 @@ export default class VideoMaker {
   videoConcat: any;
   connection: any;
   showToCompile: any;
-  showGrid: any;
   clips: any = [];
   comercials: any;
   currentShowId: any;
@@ -27,9 +26,9 @@ export default class VideoMaker {
     this.currentShowId = options.currentShowId
     try {
       this.videoConcat = videoStitch.concat;
-      this.startCompiler()
     } catch (error) {
       console.log("ERRRRRROU", error)
+      throw error
     }
   }
 
@@ -37,12 +36,13 @@ export default class VideoMaker {
     try {
       // this.loadCartoons()
       await this.getShowToCompile()
-      // await this.getShowGrid()
       await this.getComercials()
       await this.getOpenings()
       await this.sliceClips()
+      return true
     } catch (error) {
       console.log(error)
+      throw error
     }
   }
 
@@ -165,41 +165,6 @@ export default class VideoMaker {
         console.log("CATCH", error)
         throw error
       });
-  }
-
-
-  async getShowGrid() {
-    if (!this.showToCompile.id) {
-      console.log('no show found')
-      throw 'no show found'
-    }
-
-    const { data, error } = await this.connection
-      .from('showsGrid')
-      .select(`
-        id,
-        scheduleShow,
-        order,
-        cartoons_episodes (
-          episode,
-          duration,
-          part
-        ),
-        cartoons (
-          path,
-          episodes
-        )
-      `)
-      .eq('scheduleShow', this.showToCompile.id)
-      .order('order')
-
-    if (error) {
-      console.log("show grid not found", error)
-      return false;
-    }
-    this.showGrid = data
-
-    return data
   }
 
   async updateShow() {
