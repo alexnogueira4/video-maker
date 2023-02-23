@@ -7,7 +7,7 @@
     "start": "npx nodemon",
     "test": "jest --no-cache",
     "dev": "npx nodemon",
-    "build": "tsc",
+    "build": "tsc && cp .env ./dist/.env",
     "prod": "npm run build && node dist/entry.js"
   },
   "dependencies": {
