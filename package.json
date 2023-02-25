@@ -16,9 +16,11 @@
     "@types/express": "^4.17.6",
     "@types/express-promise-router": "^3.0.0",
     "@types/jest": "^25.2.3",
+    "@types/lodash": "^4.14.191",
     "@types/rpi-gpio": "^2.1.0",
     "@types/shelljs": "^0.8.11",
     "@types/supertest": "^2.0.9",
+    "amqplib": "^0.10.3",
     "bluebird": "^3.7.2",
     "dns-txt": "^2.0.2",
     "dotenv": "^8.2.0",
@@ -29,7 +31,8 @@
     "moment": "^2.10.6",
     "moment-duration-format": "^1.3.0",
     "shelljs": "^0.8.5",
-    "tmp": "0.0.28"
+    "tmp": "0.0.28",
+    "winston-loggly-bulk": "^3.2.1"
   },
   "devDependencies": {
     "@types/node": "^18.11.17",

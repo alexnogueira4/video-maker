@@ -21,4 +21,16 @@ export const DEFAULTS = {
   CARTOON_DURATION: 840, // 19 minutes
 }
 
+export const DAYS_OF_WEEK = {
+  weekdays: [1,2,3,4,5],
+  saturday: [6],
+  sunday: [0]
+};
+
+export const DAYS_FROM_DB = {
+  1: 'weekdays',
+  2: 'saturday',
+  3: 'sunday'
+}
+
 export default {}

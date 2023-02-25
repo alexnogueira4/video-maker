@@ -2,22 +2,29 @@ import "./config/env"
 import Database from './config/database'
 import VideoMaker from './api/videomaker'
 import Receiver from './api/receiver'
+import Logger from './config/logging'
+const logger = new Logger();
 
 new Receiver({
   callback: async ({ currentShowId }) => {
-    console.log('chamou o callback', currentShowId)
+    logger.info({
+      message: "starting video-maker",
+      currentShowId
+    })
+
     const database = new Database();
     if (currentShowId) {
       await database.connect()
       const videomaker = new VideoMaker({
         connection: database.connection,
-        currentShowId: currentShowId
+        currentShowId: currentShowId,
+        logger
       })
       await videomaker.startCompiler()
     }
   },
   errorHandler: (error) => {
-    console.log("deu erro aqui", error)
+    logger.error(error)
   },
   queue: 'video-maker'
 })
@@ -26,10 +33,12 @@ new Receiver({
 // (async () => {
 //   try {
 //     await database.connect()
-//     new VideoMaker({
+//     const videomaker = new VideoMaker({
 //       connection: database.connection,
-//       currentShowId: 1
+//       currentShowId: 1,
+//       logger
 //     })
+//       await videomaker.startCompiler()
 //   } catch (error) {
 //     console.log("FINALMENT", error)
 //   }

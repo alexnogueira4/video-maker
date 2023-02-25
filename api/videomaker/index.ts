@@ -1,7 +1,7 @@
-import { DEFAULTS, OPENINGS_TYPES } from './constants'
+import { DEFAULTS, OPENINGS_TYPES, DAYS_OF_WEEK, DAYS_FROM_DB } from './constants'
 import moment from 'moment';
 import shelljs from 'shelljs';
-import videoStitch from '../../clients/video-stitch';
+import { VideoConcat } from '../../clients/video-stitch';
 
 var records = [
   // { name: 'A Turma do Pateta', episodes: 8, duration: '00:22:00', path: 'a_turma_do_pateta' },
@@ -15,19 +15,24 @@ export default class VideoMaker {
   comercials: any;
   currentShowId: any;
   openings: any;
+  logger: any;
   constructor(options) {
     this.connection = options.connection
-
+    this.logger = options.logger;
     if (!options.currentShowId) {
-      console.log("A show ID must be provided")
+      this.logger.error("A show ID must be provided")
       throw 'A show ID must be provided';
     }
 
     this.currentShowId = options.currentShowId
     try {
-      this.videoConcat = videoStitch.concat;
+      this.videoConcat = new VideoConcat({
+        silent: false,
+        overwrite: true,
+        quiet: true
+      });
     } catch (error) {
-      console.log("ERRRRRROU", error)
+      this.logger.error(error)
       throw error
     }
   }
@@ -41,7 +46,7 @@ export default class VideoMaker {
       await this.sliceClips()
       return true
     } catch (error) {
-      console.log(error)
+      this.logger.error(error)
       throw error
     }
   }
@@ -129,7 +134,7 @@ export default class VideoMaker {
 
     let totalClips = [];
     for (const clipsList of clipsSliced) {
-      console.log(clipsList)
+      this.logger.info(clipsList)
       await this.concatMedia(clipsList, (outputFileName) => {
         totalClips.push({ fileName: outputFileName })
       })
@@ -140,7 +145,7 @@ export default class VideoMaker {
     } else {
 
       await this.concatMedia(totalClips, (outputFileName) => {
-        console.log("final name", outputFileName)
+        this.logger.info({ message: 'final file', outputFileName: outputFileName })
         this.updateShow()
         this.deleteTempFiles()
       }, this.showToCompile.path)
@@ -151,36 +156,34 @@ export default class VideoMaker {
   async concatMedia(clips, callback, fileName = null) {
     fileName = fileName || `_temp_${new Date().valueOf()}`
     // callback(fileName)
-    await this.videoConcat({
-      silent: false, // optional. if set to false, gives detailed output on console
-      overwrite: true // optional. by default, if file already exists, ffmpeg will ask for overwriting in console and that pause the process. if set to true, it will force overwriting. if set to false it will prevent overwriting.
-    })
+    await this.videoConcat
       .clips(clips)
-      .output(`${process.env.MEDIA_FOLDER}/medias/${fileName}.mkv`) //optional absolute file name for output file
+      .output(`${process.env.MEDIA_FOLDER}/medias/${fileName}.mkv`)
       .concat()
       .then((outputFileName) => {
-        console.log("\n\noutputFileName:", outputFileName)
+        this.logger.info({ message: 'temp file', outputFileName: outputFileName })
         callback(outputFileName)
       }).catch(error => {
-        console.log("CATCH", error)
+        this.logger.error(error)
         throw error
       });
   }
 
   async updateShow() {
-    const tomorrowDate = moment(this.showToCompile.date_to_show).add(1, 'days').format("YYYY-MM-DD");
+    let nextShowDate = this.getNextDay(this.showToCompile.date_to_show, this.showToCompile.days)
 
     const { data: nextShow, error: errorNextShow } = await this.connection
       .from('scheduleShow')
       .insert({
         show: this.showToCompile.show,
-        date_to_show: tomorrowDate,
+        date_to_show: nextShowDate,
         compiled: false
       })
       .select()
       .single()
 
     if (errorNextShow) {
+      this.logger.error(errorNextShow)
       throw errorNextShow
     }
 
@@ -208,6 +211,7 @@ export default class VideoMaker {
       .select()
 
     if (updateEpisodesError) {
+      this.logger.error(updateEpisodesError)
       throw updateEpisodesError
     }
 
@@ -220,10 +224,11 @@ export default class VideoMaker {
       .select()
 
     if (errorNextShowSchedule) {
+      this.logger.error(errorNextShow)
       throw errorNextShowSchedule
     }
 
-    console.log("Next show scheduled: ", nextShow)
+    this.logger.info({ "Next show scheduled: ": nextShow })
   }
 
   compare(a, b) {
@@ -236,15 +241,26 @@ export default class VideoMaker {
     return 0;
   }
 
+  getNextDay(currentDate, daysOfWeek) {
+    let nextDay = moment(currentDate).add(1, 'days').format("YYYY-MM-DD");
+    if (!daysOfWeek.includes(moment(nextDay).day())) {
+      nextDay = moment()
+        .add(1, 'weeks')
+        .day(Math.min(...daysOfWeek))
+        .format("YYYY-MM-DD");
+    }
+
+    return nextDay
+  }
+
   async getShowToCompile() {
-    // const tomorrowDate = moment().add(1, 'days').format("YYYY-MM-DD");
-    const tomorrowDate = moment().format("YYYY-MM-DD");
+    const currentDay = moment().format("YYYY-MM-DD");
 
     const { data, error } = await this.connection
       .from('scheduleShow')
       .select(`
         *,
-        shows(path),
+        shows(path, days),
         showsGrid(
           id,
           scheduleShow,
@@ -262,23 +278,24 @@ export default class VideoMaker {
         ) order order
       `)
 
-      .eq('date_to_show', tomorrowDate)
+      .eq('date_to_show', currentDay)
       .eq('compiled', false)
       .eq('show', this.currentShowId)
       .limit(1)
       .single()
 
     if (error) {
-      console.log("show not found")
+      this.logger.error("show not found")
       throw error;
     }
 
     data.path = data.shows.path
     data.showsGrid.sort(this.compare)
+    data.days = this.getDay(data.shows.days)
     // data.openings = OPENINGS[data.path]
 
     this.showToCompile = data
-
+    this.logger.info({ showToCompile: this.showToCompile })
     return data
   }
 
@@ -288,7 +305,7 @@ export default class VideoMaker {
       .select()
 
     if (error) {
-      console.log("show not found", error)
+      this.logger.error({ message: "show not found", error })
       return false;
     }
 
@@ -304,7 +321,7 @@ export default class VideoMaker {
       .eq('show', this.showToCompile.show)
 
     if (error) {
-      console.log("opening not found", error)
+      this.logger.error({ message: "opening not found", error })
       return false;
     }
 
@@ -324,14 +341,14 @@ export default class VideoMaker {
         .from('cartoons')
         .insert({ name, episodes, path })
         .select()
-      console.log("DESENHO", cartoons)
+      this.logger.info({ message: 'load cartoons', cartoons })
 
       for (let i = 1; i <= episodes; i++) {
         const { data, error } = await this.connection
           .from('cartoons_episodes')
           .insert({ name: i + ' ' + name, episode: i, duration, cartoon: cartoons[0].id })
           .select()
-        console.log('error: ', error)
+        console.error(error)
         console.log('number: ', i)
         console.log('data: ', data[0].episode, data[0].name)
       }
@@ -346,7 +363,7 @@ export default class VideoMaker {
         if (code === 0) {
           resolve(true);
         } else {
-          console.log("error deleting temp files")
+          this.logger.info("error deleting temp files")
           reject("error deleting temp files");
         }
       });
@@ -354,6 +371,9 @@ export default class VideoMaker {
 
   }
 
+  getDay(day) {
+    return DAYS_OF_WEEK[DAYS_FROM_DB[day]]
+  }
   // async loadComercials() {
   //   for (let x = 0; x < Object.keys(comercials).length; x++) {
   //     let record = comercials[x]
