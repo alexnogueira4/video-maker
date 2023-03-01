@@ -127,7 +127,7 @@ export default class VideoMaker {
 
   async sliceClips(clips = null) {
     clips = clips || await this.formatClips()
-    let arrayOfFilesSize = process.env.ARRAY_OF_FILES_SIZE
+    let arrayOfFilesSize: any = process.env.ARRAY_OF_FILES_SIZE || 20
     var clipsSliced: any = new Array(Math.ceil(clips.length / arrayOfFilesSize))
       .fill('')
       .map(_ => clips.splice(0, arrayOfFilesSize))
